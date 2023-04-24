@@ -1,11 +1,14 @@
 package com.github.tatercertified.hide_n_seek.mixin;
 
+import com.github.tatercertified.hide_n_seek.Hide_n_Seek;
 import com.github.tatercertified.hide_n_seek.command.HideNSeekCommand;
+import com.github.tatercertified.hide_n_seek.interfaces.ServerPlayerEntityInterface;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.Text;
 import net.minecraft.world.GameMode;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -21,6 +24,8 @@ public abstract class ServerPlayerEntityMixin implements ServerPlayerEntityInter
     @Shadow public abstract void playSound(SoundEvent event, SoundCategory category, float volume, float pitch);
 
     @Shadow public abstract boolean changeGameMode(GameMode gameMode);
+
+    @Shadow public abstract void sendMessage(Text message);
 
     public boolean isSeeker;
     public int seeker_score;
@@ -45,7 +50,9 @@ public abstract class ServerPlayerEntityMixin implements ServerPlayerEntityInter
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void tick(CallbackInfo ci) {
-        playHeartBeat();
+        if (Hide_n_Seek.getCurrentGameTime() >=0) {
+            playHeartBeat();
+        }
     }
 
 
@@ -93,10 +100,14 @@ public abstract class ServerPlayerEntityMixin implements ServerPlayerEntityInter
     private void playHeartBeat() {
         if (((ServerPlayerEntityInterface)this).getHeartBeatTicks() == 0) {
             int distance = closestSeekers();
-            if (distance <= 15) {
-                float percentage_close = (1 - (distance / 15)) * 100;
-                this.playSound(SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.PLAYERS, percentage_close, 1F);
-                ((ServerPlayerEntityInterface)this).setHeartBeatTicks(60);
+            if (distance <= 10) {
+                float percentage_close = ((float)distance / 10);
+                this.sendMessage(Text.literal(String.valueOf(percentage_close)));
+                this.playSound(SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.PLAYERS, 1F, 1F);
+                if (percentage_close == 0F) {
+                    percentage_close = 0.1F;
+                }
+                ((ServerPlayerEntityInterface)this).setHeartBeatTicks(Math.round(120 * percentage_close));
             }
         } else {
             ((ServerPlayerEntityInterface)this).setHeartBeatTicks(getHeartBeatTicks()-1);

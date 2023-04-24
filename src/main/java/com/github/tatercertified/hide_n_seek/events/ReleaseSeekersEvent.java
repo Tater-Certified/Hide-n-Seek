@@ -1,6 +1,6 @@
 package com.github.tatercertified.hide_n_seek.events;
 
-import com.github.tatercertified.hide_n_seek.mixin.MinecraftServerInterface;
+import com.github.tatercertified.hide_n_seek.Hide_n_Seek;
 import net.minecraft.server.MinecraftServer;
 
 public class ReleaseSeekersEvent extends Event{
@@ -18,6 +18,6 @@ public class ReleaseSeekersEvent extends Event{
 
     @Override
     public void event() {
-        ((MinecraftServerInterface)server).releaseSeekers();
+        Hide_n_Seek.releaseSeekers(server);
     }
 }

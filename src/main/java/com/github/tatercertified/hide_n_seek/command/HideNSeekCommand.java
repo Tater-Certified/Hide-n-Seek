@@ -1,7 +1,7 @@
 package com.github.tatercertified.hide_n_seek.command;
 
-import com.github.tatercertified.hide_n_seek.mixin.MinecraftServerInterface;
-import com.github.tatercertified.hide_n_seek.mixin.ServerPlayerEntityInterface;
+import com.github.tatercertified.hide_n_seek.Hide_n_Seek;
+import com.github.tatercertified.hide_n_seek.interfaces.ServerPlayerEntityInterface;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -20,25 +20,29 @@ public class HideNSeekCommand {
 
     public static List<ServerPlayerEntity> seekers = new ArrayList<>();
     public static void register() {
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(CommandManager.literal("hide-n-seek")
-                .requires(source -> source.hasPermissionLevel(4))
-                        .executes(HideNSeekCommand::listCommands)
-                .then(CommandManager.argument("seeker", EntityArgumentType.players())
-                        .then(CommandManager.argument("isSeeker", BoolArgumentType.bool())
-                                .executes(context -> setSeeker(context, EntityArgumentType.getPlayer(context, "seeker"), BoolArgumentType.getBool(context, "isSeeker")))))
-                .then(CommandManager.literal("random-seeker")
-                        .then(CommandManager.argument("amount", IntegerArgumentType.integer())
-                                .executes(context -> setRandomSeeker(context, IntegerArgumentType.getInteger(context, "amount")))))
-                .then(CommandManager.literal("lobby")
-                        .executes(HideNSeekCommand::setLobbyPos))
-                .then(CommandManager.literal("map")
-                        .executes(HideNSeekCommand::setMapPos))
-                .then(CommandManager.literal("start")
-                        .executes(HideNSeekCommand::startGame))
-                .then(CommandManager.literal("stop")
-                        .executes(HideNSeekCommand::stopGame))
-                .then(CommandManager.argument("duration", IntegerArgumentType.integer())
-                        .executes(context -> setDuration(context, IntegerArgumentType.getInteger(context, "duration"))))));
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            dispatcher.register(CommandManager.literal("hide-n-seek")
+                    .requires(source -> source.hasPermissionLevel(4))
+                    .executes(HideNSeekCommand::listCommands)
+                    .then(CommandManager.literal("seeker")
+                            .then(CommandManager.argument("player", EntityArgumentType.player())
+                                    .then(CommandManager.argument("isSeeker", BoolArgumentType.bool())
+                                            .executes(context -> setSeeker(context, EntityArgumentType.getPlayer(context, "player"), BoolArgumentType.getBool(context, "isSeeker"))))))
+                    .then(CommandManager.literal("random_seeker")
+                            .then(CommandManager.argument("amount", IntegerArgumentType.integer())
+                                    .executes(context -> setRandomSeeker(context, IntegerArgumentType.getInteger(context, "amount")))))
+                    .then(CommandManager.literal("start")
+                            .executes(HideNSeekCommand::startGame))
+                    .then(CommandManager.literal("duration")
+                            .then(CommandManager.argument("duration", IntegerArgumentType.integer())
+                                    .executes(context -> setDuration(context, IntegerArgumentType.getInteger(context, "duration")))))
+                    .then(CommandManager.literal("stop")
+                            .executes(HideNSeekCommand::stopGame))
+                    .then(CommandManager.literal("lobby")
+                            .executes(HideNSeekCommand::setLobbyPos))
+                    .then(CommandManager.literal("map")
+                            .executes(HideNSeekCommand::setMapPos)));
+        });
     }
 
     private static int listCommands(CommandContext<ServerCommandSource> context) {
@@ -67,7 +71,7 @@ public class HideNSeekCommand {
         }
         ServerPlayerEntity source = context.getSource().getPlayer();
         assert source != null;
-        source.sendMessage(Text.literal(reference.getDisplayName() + " is seeker: " + bool));
+        source.sendMessage(Text.literal(reference.getName().getString() + " is seeker: " + bool));
         return 0;
     }
 
@@ -90,18 +94,18 @@ public class HideNSeekCommand {
             source.sendMessage(Text.literal("You must set a seeker with /hide-n-seek seeker!"));
             return 0;
         }
-        ((MinecraftServerInterface) context.getSource().getServer()).setCurrentGameTime(0);
+        Hide_n_Seek.setCurrentGameTime(0);
         return 0;
     }
 
     private static int stopGame(CommandContext<ServerCommandSource> context) {
-        ((MinecraftServerInterface) context.getSource().getServer()).setCurrentGameTime(-1);
+        Hide_n_Seek.setCurrentGameTime(-1);
         context.getSource().getServer().sendMessage(Text.literal("The Game has Stopped!"));
         return 0;
     }
 
     private static int setDuration(CommandContext<ServerCommandSource> context, int duration) {
-        ((MinecraftServerInterface) context.getSource().getServer()).setDuration(duration);
+        Hide_n_Seek.setDuration(duration);
         ServerPlayerEntity source = context.getSource().getPlayer();
         assert source != null;
         source.sendMessage(Text.literal("The game duration is now " + duration + " ticks, or " + duration/20 + " seconds"));
@@ -109,12 +113,12 @@ public class HideNSeekCommand {
     }
 
     private static int setLobbyPos(CommandContext<ServerCommandSource> context) {
-        ((MinecraftServerInterface) context.getSource().getServer()).setLobbyTeleport(context.getSource().getPlayer().getBlockPos());
+        Hide_n_Seek.setLobbyTeleport(context.getSource().getPlayer().getBlockPos());
         return 0;
     }
 
     private static int setMapPos(CommandContext<ServerCommandSource> context) {
-        ((MinecraftServerInterface) context.getSource().getServer()).setMapTeleport(context.getSource().getPlayer().getBlockPos());
+        Hide_n_Seek.setMapTeleport(context.getSource().getPlayer().getBlockPos());
         return 0;
     }
 

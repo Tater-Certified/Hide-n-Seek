@@ -20,7 +20,7 @@ public class Event {
         return actionType;
     }
 
-    public void setActionType(String actionType) {
+    public void setEventType(String actionType) {
         this.actionType = actionType;
     }
 
@@ -37,6 +37,7 @@ public class Event {
             case "announcement" -> Hide_n_Seek.registered_events.add(new AnnounceEvent(getTime(), getData()));
             case "item-hider" -> Hide_n_Seek.registered_events.add(new GiveItemEvent(getTime(), getData(), "hider"));
             case "item-seeker" -> Hide_n_Seek.registered_events.add(new GiveItemEvent(getTime(), getData(), "seeker"));
+            case "release" -> Hide_n_Seek.registered_events.add(new ReleaseSeekersEvent(getTime()));
         }
     }
 
