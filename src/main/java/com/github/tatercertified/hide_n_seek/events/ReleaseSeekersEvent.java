@@ -20,4 +20,9 @@ public class ReleaseSeekersEvent extends Event{
     public void event() {
         Hide_n_Seek.releaseSeekers(server);
     }
+
+    @Override
+    public Integer getTime() {
+        return time;
+    }
 }

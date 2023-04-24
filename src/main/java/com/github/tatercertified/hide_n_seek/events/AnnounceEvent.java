@@ -19,19 +19,24 @@ public class AnnounceEvent extends Event{
     }
 
     @Override
+    public Integer getTime() {
+        return time;
+    }
+
+    @Override
     public void setServer(MinecraftServer server) {
         this.server = server;
     }
 
     @Override
     public void event() {
-        server.sendMessage(Text.literal(actions[0]));
-        ping(server.getPlayerManager().getPlayerList());
+        ping(server.getPlayerManager().getPlayerList(), actions[0]);
     }
 
-    private void ping(List<ServerPlayerEntity> players) {
+    private void ping(List<ServerPlayerEntity> players, String message) {
         for (ServerPlayerEntity player : players) {
-            player.playSound(SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value(), 100F, 1F);
+            player.playSound(SoundEvents.BLOCK_BELL_USE, 1F, 1F);
+            player.sendMessage(Text.literal(message), true);
         }
     }
 }

@@ -26,6 +26,11 @@ public class GiveItemEvent extends Event{
     }
 
     @Override
+    public Integer getTime() {
+        return time;
+    }
+
+    @Override
     public void setServer(MinecraftServer server) {
         this.server = server;
     }
@@ -44,16 +49,16 @@ public class GiveItemEvent extends Event{
         if (Objects.equals(receiver, "seeker")) {
             for (int i = 0; i < HideNSeekCommand.seekers.size(); i++) {
                 ServerPlayerEntity player = HideNSeekCommand.seekers.get(i);
-                for (int i1 = 0; i1 < items.size(); i++) {
-                    player.giveItemStack(items.get(i));
+                for (ItemStack item : items) {
+                    player.giveItemStack(item);
                 }
             }
         } else {
             for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
                 ServerPlayerEntity player =  server.getPlayerManager().getPlayerList().get(i);
                 if (!HideNSeekCommand.seekers.contains(player)) {
-                    for (int i1 = 0; i1 < items.size(); i++) {
-                        player.giveItemStack(items.get(i));
+                    for (ItemStack item : items) {
+                        player.giveItemStack(item);
                     }
                 }
             }

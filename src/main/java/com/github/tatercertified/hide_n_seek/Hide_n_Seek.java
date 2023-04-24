@@ -10,6 +10,7 @@ import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.ServerBossBar;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
@@ -20,10 +21,10 @@ import java.util.List;
 
 public class Hide_n_Seek implements ModInitializer {
     public static List<Event> registered_events = new ArrayList<>();
-    private static int duration = 0;
+    private static int duration;
     private static int current_time = -1;
-    private int countdown_usable;
-    private int countdown = 0;
+    private int countdown = 200;
+    private int countdown_usable = 200;
     private static BlockPos lobby;
     private static BlockPos map;
     private final ServerBossBar bar = new ServerBossBar(null, BossBar.Color.BLUE, BossBar.Style.PROGRESS);
@@ -58,7 +59,7 @@ public class Hide_n_Seek implements ModInitializer {
                     current_time++;
                     checkForEvents(server);
                     tickBossBarTimer();
-                    if (!HideNSeekCommand.seekers.isEmpty()) {
+                    if (HideNSeekCommand.seekers.isEmpty()) {
                         gameOver(getAllAlivePlayers(server), server);
                     }
                     if (!checkForAliveHiders(server)) {
@@ -83,7 +84,9 @@ public class Hide_n_Seek implements ModInitializer {
                 if (time) {
                     player.sendMessage(Text.literal("Start!"), true);
                     player.teleport(map.getX(), map.getY(), map.getZ());
+                    this.bar.setName(Text.literal(formattedTimeLeft()));
                     this.bar.addPlayer(player);
+                    player.playSound(SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 1F, 1F);
                 } else {
                     player.sendMessage(Text.literal(String.valueOf(seconds)), true);
                 }
@@ -199,11 +202,16 @@ public class Hide_n_Seek implements ModInitializer {
 
     public void reset(MinecraftServer server) {
         this.countdown_usable = this.countdown;
+        setCurrentGameTime(-1);
         HideNSeekCommand.seekers.clear();
         for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
             ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
             player.teleport(lobby.getX(), lobby.getY(), lobby.getZ());
             player.changeGameMode(GameMode.ADVENTURE);
+            player.getInventory().clear();
+            player.setHealth(20.0F);
+            player.getHungerManager().setFoodLevel(10);
+            player.getHungerManager().setExhaustion(0.0F);
         }
     }
 
@@ -222,7 +230,7 @@ public class Hide_n_Seek implements ModInitializer {
         for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
             ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
             player.sendMessage(Text.literal("The Seekers have been released!"), true);
-            player.playSound(SoundEvents.ENTITY_ENDER_DRAGON_GROWL, 100F, 1F);
+            player.playSound(SoundEvents.ENTITY_ENDER_DRAGON_GROWL, 1F, 1F);
             if (HideNSeekCommand.seekers.contains(player)) {
                 player.teleport(map.getX(), map.getY(), map.getZ());
             }

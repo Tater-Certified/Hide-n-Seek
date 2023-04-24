@@ -50,7 +50,7 @@ public abstract class ServerPlayerEntityMixin implements ServerPlayerEntityInter
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void tick(CallbackInfo ci) {
-        if (Hide_n_Seek.getCurrentGameTime() >=0) {
+        if (Hide_n_Seek.getCurrentGameTime() > 0) {
             playHeartBeat();
         }
     }
@@ -102,7 +102,6 @@ public abstract class ServerPlayerEntityMixin implements ServerPlayerEntityInter
             int distance = closestSeekers();
             if (distance <= 10) {
                 float percentage_close = ((float)distance / 10);
-                this.sendMessage(Text.literal(String.valueOf(percentage_close)));
                 this.playSound(SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.PLAYERS, 1F, 1F);
                 if (percentage_close == 0F) {
                     percentage_close = 0.1F;
