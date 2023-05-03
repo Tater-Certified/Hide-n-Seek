@@ -29,6 +29,9 @@ public class Hide_n_Seek implements ModInitializer {
     private static BlockPos map;
     private final ServerBossBar bar = new ServerBossBar(null, BossBar.Color.BLUE, BossBar.Style.PROGRESS);
 
+    public static final List<ServerPlayerEntity> hiders = new ArrayList<>();
+    public static final List<ServerPlayerEntity> seekers = new ArrayList<>();
+
 
     @Override
     public void onInitialize() {
@@ -59,37 +62,34 @@ public class Hide_n_Seek implements ModInitializer {
                     current_time++;
                     checkForEvents(server);
                     tickBossBarTimer();
-                    if (HideNSeekCommand.seekers.isEmpty()) {
-                        gameOver(getAllAlivePlayers(server), server);
+                    if (seekers.isEmpty()) {
+                        gameOver(getAllAlivePlayers(), server);
                     }
-                    if (!checkForAliveHiders(server)) {
-                        gameOver(getNameFromPlayers(HideNSeekCommand.seekers), server);
+                    if (!checkForAliveHiders()) {
+                        gameOver(getNameFromPlayers(), server);
                     }
                 } else {
                     //Game Over
-                    gameOver(getAllAlivePlayers(server), server);
+                    gameOver(getAllAlivePlayers(), server);
                 }
             } else {
-                countdown(server);
+                countdown();
             }
         }
     }
 
-    private void countdown(MinecraftServer server) {
+    private void countdown() {
         int seconds = Math.round((float) countdown_usable/20);
         boolean time = seconds == 0;
-        for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
-            ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
-            if (!HideNSeekCommand.seekers.contains(player)) {
-                if (time) {
-                    player.sendMessage(Text.literal("Start!"), true);
-                    player.teleport(map.getX(), map.getY(), map.getZ());
-                    this.bar.setName(Text.literal(formattedTimeLeft()));
-                    this.bar.addPlayer(player);
-                    player.playSound(SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 1F, 1F);
-                } else {
-                    player.sendMessage(Text.literal(String.valueOf(seconds)), true);
-                }
+        for (ServerPlayerEntity player : hiders) {
+            if (time) {
+                player.sendMessage(Text.literal("Start!"), true);
+                player.teleport(map.getX(), map.getY(), map.getZ());
+                this.bar.setName(Text.literal(formattedTimeLeft()));
+                this.bar.addPlayer(player);
+                player.playSound(SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 1F, 1F);
+            } else {
+                player.sendMessage(Text.literal(String.valueOf(seconds)), true);
             }
         }
         this.countdown_usable--;
@@ -118,25 +118,30 @@ public class Hide_n_Seek implements ModInitializer {
         reset(server);
     }
 
-    private List<String> getAllAlivePlayers(MinecraftServer server) {
+    private List<String> getAllAlivePlayers() {
         List<String> alive = new ArrayList<>();
-        for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
-            ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
-            if (!HideNSeekCommand.seekers.contains(player) && !player.isSpectator()) {
-                alive.add(player.getName().getString());
-            }
+        for (ServerPlayerEntity player : hiders) {
+            alive.add(player.getName().getString());
         }
         return alive;
     }
 
-    private boolean checkForAliveHiders(MinecraftServer server) {
-        for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
-            ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
-            if (!player.isSpectator() && !HideNSeekCommand.seekers.contains(player)) {
+    private boolean checkForAliveHiders() {
+        for (ServerPlayerEntity player : hiders) {
+            if (!player.isSpectator()) {
                 return true;
             }
         }
         return false;
+    }
+
+    public static void fillHiderList(MinecraftServer server) {
+        for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
+            ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
+            if (!seekers.contains(player)) {
+                hiders.add(player);
+            }
+        }
     }
 
     private void tickBossBarTimer() {
@@ -155,9 +160,9 @@ public class Hide_n_Seek implements ModInitializer {
         }
     }
 
-    private List<String> getNameFromPlayers(List<ServerPlayerEntity> players) {
+    private List<String> getNameFromPlayers() {
         List<String> names = new ArrayList<>();
-        for (ServerPlayerEntity player : players) {
+        for (ServerPlayerEntity player : Hide_n_Seek.seekers) {
             names.add(player.getName().getString());
         }
         return names;
@@ -203,7 +208,8 @@ public class Hide_n_Seek implements ModInitializer {
     public void reset(MinecraftServer server) {
         this.countdown_usable = this.countdown;
         setCurrentGameTime(-1);
-        HideNSeekCommand.seekers.clear();
+        seekers.clear();
+        hiders.clear();
         for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
             ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
             player.teleport(lobby.getX(), lobby.getY(), lobby.getZ());
@@ -231,7 +237,7 @@ public class Hide_n_Seek implements ModInitializer {
             ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
             player.sendMessage(Text.literal("The Seekers have been released!"), true);
             player.playSound(SoundEvents.ENTITY_ENDER_DRAGON_GROWL, 1F, 1F);
-            if (HideNSeekCommand.seekers.contains(player)) {
+            if (seekers.contains(player)) {
                 player.teleport(map.getX(), map.getY(), map.getZ());
             }
         }

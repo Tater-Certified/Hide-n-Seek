@@ -4,6 +4,7 @@
   "package": "com.github.tatercertified.hide_n_seek.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "CompassMixin",
     "ServerPlayerEntityMixin"
   ],
   "client": [

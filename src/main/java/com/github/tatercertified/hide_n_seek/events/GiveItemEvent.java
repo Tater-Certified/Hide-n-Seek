@@ -1,6 +1,5 @@
 package com.github.tatercertified.hide_n_seek.events;
 
-import com.github.tatercertified.hide_n_seek.command.HideNSeekCommand;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
@@ -12,6 +11,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+
+import static com.github.tatercertified.hide_n_seek.Hide_n_Seek.hiders;
+import static com.github.tatercertified.hide_n_seek.Hide_n_Seek.seekers;
 
 public class GiveItemEvent extends Event{
     protected int time;
@@ -47,19 +49,15 @@ public class GiveItemEvent extends Event{
             items.add(itemStack);
         }
         if (Objects.equals(receiver, "seeker")) {
-            for (int i = 0; i < HideNSeekCommand.seekers.size(); i++) {
-                ServerPlayerEntity player = HideNSeekCommand.seekers.get(i);
+            for (ServerPlayerEntity player : seekers) {
                 for (ItemStack item : items) {
                     player.giveItemStack(item);
                 }
             }
         } else {
-            for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
-                ServerPlayerEntity player =  server.getPlayerManager().getPlayerList().get(i);
-                if (!HideNSeekCommand.seekers.contains(player)) {
-                    for (ItemStack item : items) {
-                        player.giveItemStack(item);
-                    }
+            for (ServerPlayerEntity player : hiders) {
+                for (ItemStack item : items) {
+                    player.giveItemStack(item);
                 }
             }
         }

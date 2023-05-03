@@ -1,15 +1,17 @@
 package com.github.tatercertified.hide_n_seek.mixin;
 
 import com.github.tatercertified.hide_n_seek.Hide_n_Seek;
-import com.github.tatercertified.hide_n_seek.command.HideNSeekCommand;
 import com.github.tatercertified.hide_n_seek.interfaces.ServerPlayerEntityInterface;
+import com.mojang.authlib.GameProfile;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.GameMode;
+import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,14 +20,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.UUID;
 
+import static com.github.tatercertified.hide_n_seek.Hide_n_Seek.hiders;
+import static com.github.tatercertified.hide_n_seek.Hide_n_Seek.seekers;
+
 @Mixin(ServerPlayerEntity.class)
-public abstract class ServerPlayerEntityMixin implements ServerPlayerEntityInterface {
+public abstract class ServerPlayerEntityMixin extends PlayerEntity implements ServerPlayerEntityInterface {
+
+    public ServerPlayerEntityMixin(World world, BlockPos pos, float yaw, GameProfile gameProfile) {
+        super(world, pos, yaw, gameProfile);
+    }
 
     @Shadow public abstract void playSound(SoundEvent event, SoundCategory category, float volume, float pitch);
 
     @Shadow public abstract boolean changeGameMode(GameMode gameMode);
 
-    @Shadow public abstract void sendMessage(Text message);
 
     public boolean isSeeker;
     public int seeker_score;
@@ -34,6 +42,8 @@ public abstract class ServerPlayerEntityMixin implements ServerPlayerEntityInter
     @Inject(method = "onDeath", at = @At("HEAD"), cancellable = true)
     private void onDeath(DamageSource damageSource, CallbackInfo ci) {
         if (!((ServerPlayerEntityInterface)this).isSeeker()) {
+            this.getInventory().clear();
+            hiders.remove((ServerPlayerEntity)(Object)this);
             if (damageSource.getSource().isPlayer()) {
                 UUID uuid = damageSource.getSource().getUuid();
                 ServerPlayerEntity killer = damageSource.getSource().getServer().getPlayerManager().getPlayer(uuid);
@@ -42,7 +52,7 @@ public abstract class ServerPlayerEntityMixin implements ServerPlayerEntityInter
                 }
             }
         } else {
-            HideNSeekCommand.seekers.remove((ServerPlayerEntity)(Object)this);
+            seekers.remove((ServerPlayerEntity)(Object)this);
         }
         this.changeGameMode(GameMode.SPECTATOR);
         ci.cancel();
@@ -88,7 +98,7 @@ public abstract class ServerPlayerEntityMixin implements ServerPlayerEntityInter
 
     private int closestSeekers() {
         int final_distance = Integer.MAX_VALUE;
-        for (ServerPlayerEntity player : HideNSeekCommand.seekers) {
+        for (ServerPlayerEntity player : seekers) {
           float distance = player.distanceTo(((ServerPlayerEntity)(Object)this));
           if (distance < final_distance) {
               final_distance = Math.round(distance);

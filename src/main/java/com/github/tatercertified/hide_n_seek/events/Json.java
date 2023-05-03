@@ -2,6 +2,7 @@ package com.github.tatercertified.hide_n_seek.events;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.BufferedReader;
@@ -15,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Json {
-    static Gson gson = new Gson();
+    static Gson gson = new GsonBuilder().setPrettyPrinting().create();
     static String path = FabricLoader.getInstance().getConfigDir() + "/hide-n-seek-events.json";
     public static void serializeData() {
         // Serialize a list of MyGsonClass instances to a JSON file
@@ -47,6 +48,12 @@ public class Json {
             example_release.setEventType("release");
             example_release.setTime(400);
             examples.add(example_release);
+
+            //GiveCompass
+            Event example_compass = new Event();
+            example_compass.setEventType("compass");
+            example_compass.setTime(2000);
+            examples.add(example_compass);
 
             String json = gson.toJson(examples);
             try (FileWriter writer = new FileWriter(path)) {

@@ -11,38 +11,36 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.BlockPos;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class HideNSeekCommand {
+import static com.github.tatercertified.hide_n_seek.Hide_n_Seek.seekers;
 
-    public static List<ServerPlayerEntity> seekers = new ArrayList<>();
+public class HideNSeekCommand {
     public static void register() {
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(CommandManager.literal("hide-n-seek")
-                    .requires(source -> source.hasPermissionLevel(4))
-                    .executes(HideNSeekCommand::listCommands)
-                    .then(CommandManager.literal("seeker")
-                            .then(CommandManager.argument("player", EntityArgumentType.player())
-                                    .then(CommandManager.argument("isSeeker", BoolArgumentType.bool())
-                                            .executes(context -> setSeeker(context, EntityArgumentType.getPlayer(context, "player"), BoolArgumentType.getBool(context, "isSeeker"))))))
-                    .then(CommandManager.literal("random_seeker")
-                            .then(CommandManager.argument("amount", IntegerArgumentType.integer())
-                                    .executes(context -> setRandomSeeker(context, IntegerArgumentType.getInteger(context, "amount")))))
-                    .then(CommandManager.literal("start")
-                            .executes(HideNSeekCommand::startGame))
-                    .then(CommandManager.literal("duration")
-                            .then(CommandManager.argument("duration", IntegerArgumentType.integer())
-                                    .executes(context -> setDuration(context, IntegerArgumentType.getInteger(context, "duration")))))
-                    .then(CommandManager.literal("stop")
-                            .executes(HideNSeekCommand::stopGame))
-                    .then(CommandManager.literal("lobby")
-                            .executes(HideNSeekCommand::setLobbyPos))
-                    .then(CommandManager.literal("map")
-                            .executes(HideNSeekCommand::setMapPos)));
-        });
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(CommandManager.literal("hide-n-seek")
+                .requires(source -> source.hasPermissionLevel(4))
+                .executes(HideNSeekCommand::listCommands)
+                .then(CommandManager.literal("seeker")
+                        .then(CommandManager.argument("player", EntityArgumentType.player())
+                                .then(CommandManager.argument("isSeeker", BoolArgumentType.bool())
+                                        .executes(context -> setSeeker(context, EntityArgumentType.getPlayer(context, "player"), BoolArgumentType.getBool(context, "isSeeker"))))))
+                .then(CommandManager.literal("random_seeker")
+                        .then(CommandManager.argument("amount", IntegerArgumentType.integer())
+                                .executes(context -> setRandomSeeker(context, IntegerArgumentType.getInteger(context, "amount")))))
+                .then(CommandManager.literal("start")
+                        .executes(HideNSeekCommand::startGame))
+                .then(CommandManager.literal("duration")
+                        .then(CommandManager.argument("duration", IntegerArgumentType.integer())
+                                .executes(context -> setDuration(context, IntegerArgumentType.getInteger(context, "duration")))))
+                .then(CommandManager.literal("stop")
+                        .executes(HideNSeekCommand::stopGame))
+                .then(CommandManager.literal("lobby")
+                        .executes(HideNSeekCommand::setLobbyPos))
+                .then(CommandManager.literal("map")
+                        .executes(HideNSeekCommand::setMapPos))));
     }
 
     private static int listCommands(CommandContext<ServerCommandSource> context) {
@@ -94,6 +92,7 @@ public class HideNSeekCommand {
             source.sendMessage(Text.literal("You must set a seeker with /hide-n-seek seeker!"));
             return 0;
         }
+        Hide_n_Seek.fillHiderList(context.getSource().getServer());
         Hide_n_Seek.setCurrentGameTime(0);
         return 0;
     }
@@ -113,12 +112,20 @@ public class HideNSeekCommand {
     }
 
     private static int setLobbyPos(CommandContext<ServerCommandSource> context) {
-        Hide_n_Seek.setLobbyTeleport(context.getSource().getPlayer().getBlockPos());
+        BlockPos pos = context.getSource().getPlayer().getBlockPos();
+        Hide_n_Seek.setLobbyTeleport(pos);
+        ServerPlayerEntity source = context.getSource().getPlayer();
+        assert source != null;
+        source.sendMessage(Text.literal("The Lobby is now set at " + pos.toShortString()));
         return 0;
     }
 
     private static int setMapPos(CommandContext<ServerCommandSource> context) {
-        Hide_n_Seek.setMapTeleport(context.getSource().getPlayer().getBlockPos());
+        BlockPos pos = context.getSource().getPlayer().getBlockPos();
+        Hide_n_Seek.setMapTeleport(pos);
+        ServerPlayerEntity source = context.getSource().getPlayer();
+        assert source != null;
+        source.sendMessage(Text.literal("The Map is now set at " + pos.toShortString()));
         return 0;
     }
 
