@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.UUID;
 
@@ -60,8 +61,15 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity implements Se
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void tick(CallbackInfo ci) {
-        if (Hide_n_Seek.getCurrentGameTime() > 0) {
+        if (!isSeeker && Hide_n_Seek.getCurrentGameTime() > 0) {
             playHeartBeat();
+        }
+    }
+
+    @Inject(method = "damage", at = @At("HEAD"), cancellable = true)
+    private void damage(DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+        if (source.getSource().isPlayer() && ((ServerPlayerEntityInterface)source.getSource()).isSeeker() == ((ServerPlayerEntityInterface)this).isSeeker()) {
+            cir.setReturnValue(false);
         }
     }
 

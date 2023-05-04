@@ -2,6 +2,7 @@ package com.github.tatercertified.hide_n_seek.events;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 
@@ -35,7 +36,7 @@ public class AnnounceEvent extends Event{
 
     private void ping(List<ServerPlayerEntity> players, String message) {
         for (ServerPlayerEntity player : players) {
-            player.playSound(SoundEvents.BLOCK_BELL_USE, 1F, 1F);
+            player.playSound(SoundEvents.BLOCK_BELL_USE, SoundCategory.PLAYERS,1F, 1F);
             player.sendMessage(Text.literal(message), true);
         }
     }

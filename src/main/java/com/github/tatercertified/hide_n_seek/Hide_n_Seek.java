@@ -3,6 +3,7 @@ package com.github.tatercertified.hide_n_seek;
 import com.github.tatercertified.hide_n_seek.command.HideNSeekCommand;
 import com.github.tatercertified.hide_n_seek.events.Event;
 import com.github.tatercertified.hide_n_seek.events.Json;
+import com.github.tatercertified.hide_n_seek.events.ReleaseSeekersEvent;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -23,11 +24,14 @@ public class Hide_n_Seek implements ModInitializer {
     public static List<Event> registered_events = new ArrayList<>();
     private static int duration;
     private static int current_time = -1;
-    private int countdown = 200;
-    private int countdown_usable = 200;
+    private static int countdown = 200;
+    private static int countdown_usable = 200;
+    private static int seeker_time_left;
+    private int seeker_time_released;
     private static BlockPos lobby;
     private static BlockPos map;
-    private final ServerBossBar bar = new ServerBossBar(null, BossBar.Color.BLUE, BossBar.Style.PROGRESS);
+    private static final ServerBossBar bar = new ServerBossBar(null, BossBar.Color.BLUE, BossBar.Style.PROGRESS);
+    private static final ServerBossBar seeker_bar = new ServerBossBar(null, BossBar.Color.RED, BossBar.Style.PROGRESS);
 
     public static final List<ServerPlayerEntity> hiders = new ArrayList<>();
     public static final List<ServerPlayerEntity> seekers = new ArrayList<>();
@@ -66,33 +70,39 @@ public class Hide_n_Seek implements ModInitializer {
                         gameOver(getAllAlivePlayers(), server);
                     }
                     if (!checkForAliveHiders()) {
-                        gameOver(getNameFromPlayers(), server);
+                        gameOver(getNameFromSeekers(), server);
                     }
                 } else {
                     //Game Over
                     gameOver(getAllAlivePlayers(), server);
                 }
             } else {
-                countdown();
+                countdown(server);
             }
         }
     }
 
-    private void countdown() {
+    private void countdown(MinecraftServer server) {
         int seconds = Math.round((float) countdown_usable/20);
         boolean time = seconds == 0;
-        for (ServerPlayerEntity player : hiders) {
+        for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
+            ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
             if (time) {
-                player.sendMessage(Text.literal("Start!"), true);
-                player.teleport(map.getX(), map.getY(), map.getZ());
-                this.bar.setName(Text.literal(formattedTimeLeft()));
-                this.bar.addPlayer(player);
-                player.playSound(SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 1F, 1F);
+                if (hiders.contains(player)) {
+                    player.sendMessage(Text.literal("Start!"), true);
+                    player.teleport(map.getX(), map.getY(), map.getZ());
+                    bar.setName(Text.literal(formattedTime(getTimeLeft())));
+                    bar.addPlayer(player);
+                    player.playSound(SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 1F, 1F);
+                } else {
+                    seeker_bar.setName(Text.literal(formattedTime(seeker_time_left)));
+                    seeker_bar.addPlayer(player);
+                }
             } else {
                 player.sendMessage(Text.literal(String.valueOf(seconds)), true);
             }
         }
-        this.countdown_usable--;
+        countdown_usable--;
     }
 
     private void checkForEvents(MinecraftServer server) {
@@ -101,6 +111,10 @@ public class Hide_n_Seek implements ModInitializer {
             if (current_time == event.getTime()) {
                 event.setServer(server);
                 event.event();
+            }
+            if (seeker_time_left >= 0 && event instanceof ReleaseSeekersEvent) {
+                setSeekerReleaseTimeLeft(event.getTime() - getCurrentGameTime());
+                seeker_time_released = event.getTime();
             }
         }
     }
@@ -113,7 +127,6 @@ public class Hide_n_Seek implements ModInitializer {
             player.sendMessage(Text.literal(String.join(", ", winners) + " have won the game!"), true);
             player.playSound(SoundEvents.ENTITY_PLAYER_LEVELUP, 100F, 1F);
             player.playSound(SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, 100F, 1F);
-            this.bar.removePlayer(player);
         }
         reset(server);
     }
@@ -145,12 +158,15 @@ public class Hide_n_Seek implements ModInitializer {
     }
 
     private void tickBossBarTimer() {
-        bar.setName(Text.literal(formattedTimeLeft()));
+        bar.setName(Text.literal(formattedTime(getTimeLeft())));
         bar.setPercent((float) getCurrentGameTime()/getDuration());
+
+        seeker_bar.setName(Text.literal(formattedTime(seeker_time_left)));
+        seeker_bar.setPercent((float) getCurrentGameTime()/seeker_time_released);
     }
 
-    private String formattedTimeLeft() {
-        int sec = Math.round((float) this.getTimeLeft()/20);
+    private String formattedTime(int input_ticks) {
+        int sec = Math.round((float) input_ticks/20);
         if (sec > 59) {
             int minutes = sec / 60;
             int seconds = sec % 60;
@@ -160,7 +176,11 @@ public class Hide_n_Seek implements ModInitializer {
         }
     }
 
-    private List<String> getNameFromPlayers() {
+    private void setSeekerReleaseTimeLeft(int time) {
+        seeker_time_left = time;
+    }
+
+    private List<String> getNameFromSeekers() {
         List<String> names = new ArrayList<>();
         for (ServerPlayerEntity player : Hide_n_Seek.seekers) {
             names.add(player.getName().getString());
@@ -200,13 +220,13 @@ public class Hide_n_Seek implements ModInitializer {
 
 
     public void setCountdown(int countdown) {
-        this.countdown = countdown;
-        this.countdown_usable = countdown;
+        Hide_n_Seek.countdown = countdown;
+        countdown_usable = countdown;
     }
 
 
-    public void reset(MinecraftServer server) {
-        this.countdown_usable = this.countdown;
+    public static void reset(MinecraftServer server) {
+        countdown_usable = countdown;
         setCurrentGameTime(-1);
         seekers.clear();
         hiders.clear();
@@ -218,7 +238,10 @@ public class Hide_n_Seek implements ModInitializer {
             player.setHealth(20.0F);
             player.getHungerManager().setFoodLevel(10);
             player.getHungerManager().setExhaustion(0.0F);
+            bar.removePlayer(player);
+            seeker_bar.removePlayer(player);
         }
+        seeker_time_left = 0;
     }
 
 
@@ -238,6 +261,8 @@ public class Hide_n_Seek implements ModInitializer {
             player.sendMessage(Text.literal("The Seekers have been released!"), true);
             player.playSound(SoundEvents.ENTITY_ENDER_DRAGON_GROWL, 1F, 1F);
             if (seekers.contains(player)) {
+                seeker_bar.removePlayer(player);
+                bar.addPlayer(player);
                 player.teleport(map.getX(), map.getY(), map.getZ());
             }
         }

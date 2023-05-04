@@ -24,7 +24,7 @@ public class Json {
             List<Event> examples = new ArrayList<>();
             //Announcement
             Event example_announce = new Event();
-            example_announce.setEventType("announce");
+            example_announce.setEventType("announcement");
             example_announce.setData(new String[]{"This is an example announcement at 2000 ticks!"});
             example_announce.setTime(2000);
             examples.add(example_announce);
@@ -39,7 +39,7 @@ public class Json {
             //GiveItemSeeker
             Event example_item1 = new Event();
             example_item1.setEventType("item-seeker");
-            example_item1.setData(new String[]{"compass1"});
+            example_item1.setData(new String[]{"diamond_sword1", "golden_carrot64"});
             example_item1.setTime(2000);
             examples.add(example_item1);
 

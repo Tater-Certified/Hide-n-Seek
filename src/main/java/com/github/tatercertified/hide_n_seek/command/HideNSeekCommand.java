@@ -98,7 +98,7 @@ public class HideNSeekCommand {
     }
 
     private static int stopGame(CommandContext<ServerCommandSource> context) {
-        Hide_n_Seek.setCurrentGameTime(-1);
+        Hide_n_Seek.reset(context.getSource().getServer());
         context.getSource().getServer().sendMessage(Text.literal("The Game has Stopped!"));
         return 0;
     }

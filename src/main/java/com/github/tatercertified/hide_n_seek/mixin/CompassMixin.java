@@ -6,6 +6,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,16 +22,20 @@ public class CompassMixin extends Item {
         super(settings);
     }
 
-    @Inject(method = "inventoryTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/CompassItem;hasLodestone(Lnet/minecraft/item/ItemStack;)Z", shift = At.Shift.BEFORE))
+    @Inject(method = "inventoryTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/CompassItem;hasLodestone(Lnet/minecraft/item/ItemStack;)Z", shift = At.Shift.BEFORE), cancellable = true)
     private void inventoryTick(ItemStack stack, World world, Entity entity, int slot, boolean selected, CallbackInfo ci) {
         if (stack.getNbt() != null && stack.getNbt().getBoolean("tracker")) {
-            NbtCompound pos = new NbtCompound();
             ServerPlayerEntity closest = closestHider((ServerPlayerEntity) entity);
-            pos.putInt("X", closest.getBlockX());
-            pos.putInt("Y", closest.getBlockY());
-            pos.putInt("Z", closest.getBlockZ());
-            stack.getOrCreateNbt().put("LodestonePos", pos);
-            stack.getOrCreateNbt().putBoolean("LodestoneTracked", true);
+            if (closest != null) {
+                stack.getOrCreateNbt().putString("LodestoneDimension", world.getRegistryKey().getValue().toString());
+                var pos = new NbtCompound();
+                pos.putInt("X", closest.getBlockX());
+                pos.putInt("Y", closest.getBlockY());
+                pos.putInt("Z", closest.getBlockZ());
+                stack.getOrCreateNbt().put("LodestonePos", pos);
+                stack.getOrCreateNbt().putBoolean("LodestoneTracked", true);
+                ci.cancel();
+            }
         }
     }
 
