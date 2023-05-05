@@ -1,7 +1,6 @@
 package com.github.tatercertified.hide_n_seek;
 
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 
 import java.io.IOException;
@@ -21,6 +20,7 @@ public class Config {
     final static String DURATION_KEY = "duration";
     final static String LOBBY_KEY = "lobby-pos";
     final static String MAP_KEY = "map-pos";
+    final static String COUNTDOWN_KEY = "countdown";
 
     public static String cfgver = "1.0";
     public static int duration;
@@ -82,6 +82,9 @@ public class Config {
         if (!properties.containsKey(MAP_KEY)) {
             properties.setProperty(MAP_KEY, "0,0,0");
         }
+        if (!properties.containsKey(COUNTDOWN_KEY)) {
+            properties.setProperty(COUNTDOWN_KEY, "200");
+        }
     }
 
     /**
@@ -107,12 +110,15 @@ public class Config {
         String map_string = properties.getProperty(MAP_KEY);
         int[] numbers1 = data2Coords(map_string);
         map = new BlockPos(numbers1[0], numbers1[1], numbers1[2]);
+
+        Hide_n_Seek.setCountdown(Integer.parseInt(properties.getProperty(COUNTDOWN_KEY)));
     }
 
-    public static void saveConfig(MinecraftServer server) {
+    public static void saveConfig() {
         properties.setProperty(DURATION_KEY, String.valueOf(Hide_n_Seek.getDuration()));
         properties.setProperty(LOBBY_KEY, blockPos2data(Hide_n_Seek.getLobbyPos()));
         properties.setProperty(MAP_KEY, blockPos2data((Hide_n_Seek.getMapPos())));
+        properties.setProperty(COUNTDOWN_KEY, String.valueOf(Hide_n_Seek.getCountdown()));
         try {
             storecfg();
         } catch (IOException e) {

@@ -4,16 +4,23 @@ import com.github.tatercertified.hide_n_seek.command.HideNSeekCommand;
 import com.github.tatercertified.hide_n_seek.events.Event;
 import com.github.tatercertified.hide_n_seek.events.Json;
 import com.github.tatercertified.hide_n_seek.events.ReleaseSeekersEvent;
+import com.github.tatercertified.hide_n_seek.interfaces.ServerPlayerEntityInterface;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.ServerBossBar;
+import net.minecraft.network.packet.s2c.play.SubtitleS2CPacket;
+import net.minecraft.network.packet.s2c.play.TitleFadeS2CPacket;
+import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
+import net.minecraft.scoreboard.Scoreboard;
+import net.minecraft.scoreboard.Team;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.GameMode;
 
@@ -32,6 +39,7 @@ public class Hide_n_Seek implements ModInitializer {
     private static BlockPos map;
     private static final ServerBossBar bar = new ServerBossBar(null, BossBar.Color.BLUE, BossBar.Style.PROGRESS);
     private static final ServerBossBar seeker_bar = new ServerBossBar(null, BossBar.Color.RED, BossBar.Style.PROGRESS);
+    private static Team seeker_team;
 
     public static final List<ServerPlayerEntity> hiders = new ArrayList<>();
     public static final List<ServerPlayerEntity> seekers = new ArrayList<>();
@@ -48,12 +56,18 @@ public class Hide_n_Seek implements ModInitializer {
         events.clear();
         Config.config();
 
-        ServerLifecycleEvents.SERVER_STOPPING.register(Config::saveConfig);
+        ServerLifecycleEvents.SERVER_STOPPING.register(server1 -> Config.saveConfig());
 
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             setDuration(Config.duration);
             setLobbyTeleport(Config.lobby);
             setMapTeleport(Config.map);
+
+            seeker_team = server.getScoreboard().addTeam("seekers");
+            if (seeker_team == null) {
+                seeker_team = server.getScoreboard().addTeam("seekers");
+            }
+            seeker_team.setColor(Formatting.RED);
         });
 
         ServerTickEvents.START_SERVER_TICK.register(this::tickGame);
@@ -67,14 +81,15 @@ public class Hide_n_Seek implements ModInitializer {
                     checkForEvents(server);
                     tickBossBarTimer();
                     if (seekers.isEmpty()) {
-                        gameOver(getAllAlivePlayers(), server);
+                        gameOver(getAllAlivePlayers(), "Hiders" , server);
+                        return;
                     }
                     if (!checkForAliveHiders()) {
-                        gameOver(getNameFromSeekers(), server);
+                        gameOver(getNameFromSeekers(), "Seekers", server);
                     }
                 } else {
                     //Game Over
-                    gameOver(getAllAlivePlayers(), server);
+                    gameOver(getAllAlivePlayers(), "Hiders", server);
                 }
             } else {
                 countdown(server);
@@ -88,7 +103,7 @@ public class Hide_n_Seek implements ModInitializer {
         for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
             ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
             if (time) {
-                if (hiders.contains(player)) {
+                if (!((ServerPlayerEntityInterface)player).isSeeker()) {
                     player.sendMessage(Text.literal("Start!"), true);
                     player.teleport(map.getX(), map.getY(), map.getZ());
                     bar.setName(Text.literal(formattedTime(getTimeLeft())));
@@ -97,7 +112,11 @@ public class Hide_n_Seek implements ModInitializer {
                 } else {
                     seeker_bar.setName(Text.literal(formattedTime(seeker_time_left)));
                     seeker_bar.addPlayer(player);
+                    server.getScoreboard().addPlayerToTeam(player.getName().getString(), seeker_team);
                 }
+
+                player.changeGameMode(GameMode.ADVENTURE);
+                player.setInvulnerable(false);
             } else {
                 player.sendMessage(Text.literal(String.valueOf(seconds)), true);
             }
@@ -119,14 +138,19 @@ public class Hide_n_Seek implements ModInitializer {
         }
     }
 
-    private void gameOver(List<String> winners, MinecraftServer server) {
+    private void gameOver(List<String> winners, String group, MinecraftServer server) {
         setCurrentGameTime(-1);
         server.sendMessage(Text.literal("The Game is Over!"));
         for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
             ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
-            player.sendMessage(Text.literal(String.join(", ", winners) + " have won the game!"), true);
-            player.playSound(SoundEvents.ENTITY_PLAYER_LEVELUP, 100F, 1F);
-            player.playSound(SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, 100F, 1F);
+            String winners_msg = String.join(", ", winners) + " have won the game!";
+            player.sendMessage(Text.literal(winners_msg));
+            TitleS2CPacket title = new TitleS2CPacket(Text.empty());
+            SubtitleS2CPacket subtitle = new SubtitleS2CPacket(Text.literal("The " + group + " Won!"));
+            TitleFadeS2CPacket fade = new TitleFadeS2CPacket(20, 160, 20);
+            server.getPlayerManager().sendToAll(fade);
+            server.getPlayerManager().sendToAll(subtitle);
+            server.getPlayerManager().sendToAll(title);
         }
         reset(server);
     }
@@ -151,7 +175,7 @@ public class Hide_n_Seek implements ModInitializer {
     public static void fillHiderList(MinecraftServer server) {
         for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
             ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
-            if (!seekers.contains(player)) {
+            if (!((ServerPlayerEntityInterface)player).isSeeker()) {
                 hiders.add(player);
             }
         }
@@ -214,14 +238,13 @@ public class Hide_n_Seek implements ModInitializer {
     }
 
 
-    public void setTimeLeft(int duration1) {
-        current_time = duration - duration1;
-    }
-
-
-    public void setCountdown(int countdown) {
+    public static void setCountdown(int countdown) {
         Hide_n_Seek.countdown = countdown;
         countdown_usable = countdown;
+    }
+
+    public static int getCountdown() {
+        return countdown;
     }
 
 
@@ -232,14 +255,20 @@ public class Hide_n_Seek implements ModInitializer {
         hiders.clear();
         for (int i = 0; i < server.getPlayerManager().getPlayerList().size(); i++) {
             ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
-            player.teleport(lobby.getX(), lobby.getY(), lobby.getZ());
+            player.setHealth(20.0F);
             player.changeGameMode(GameMode.ADVENTURE);
             player.getInventory().clear();
-            player.setHealth(20.0F);
-            player.getHungerManager().setFoodLevel(10);
+            player.teleport(lobby.getX(), lobby.getY(), lobby.getZ());
+            player.playSound(SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 1F, 1F);
+            player.getHungerManager().setFoodLevel(20);
             player.getHungerManager().setExhaustion(0.0F);
+            player.setInvulnerable(true);
             bar.removePlayer(player);
             seeker_bar.removePlayer(player);
+            ((ServerPlayerEntityInterface)player).setSeeker(false);
+            if (seeker_team.getPlayerList().contains(player.getName().getString())) {
+                server.getScoreboard().removePlayerFromTeam(player.getName().getString(), seeker_team);
+            }
         }
         seeker_time_left = 0;
     }
@@ -260,7 +289,7 @@ public class Hide_n_Seek implements ModInitializer {
             ServerPlayerEntity player = server.getPlayerManager().getPlayerList().get(i);
             player.sendMessage(Text.literal("The Seekers have been released!"), true);
             player.playSound(SoundEvents.ENTITY_ENDER_DRAGON_GROWL, 1F, 1F);
-            if (seekers.contains(player)) {
+            if (((ServerPlayerEntityInterface)player).isSeeker()) {
                 seeker_bar.removePlayer(player);
                 bar.addPlayer(player);
                 player.teleport(map.getX(), map.getY(), map.getZ());
