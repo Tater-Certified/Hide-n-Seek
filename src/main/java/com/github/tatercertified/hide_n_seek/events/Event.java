@@ -39,6 +39,7 @@ public class Event {
             case "item-seeker" -> Hide_n_Seek.registered_events.add(new GiveItemEvent(getTime(), getData(), "seeker"));
             case "release" -> Hide_n_Seek.registered_events.add(new ReleaseSeekersEvent(getTime()));
             case "compass" -> Hide_n_Seek.registered_events.add(new GiveCompassEvent(getTime()));
+            case "hider-pvp" -> Hide_n_Seek.registered_events.add(new HiderPvpEvent(getTime()));
         }
     }
 

@@ -109,6 +109,7 @@ public class Hide_n_Seek implements ModInitializer {
                     bar.setName(Text.literal(formattedTime(getTimeLeft())));
                     bar.addPlayer(player);
                     player.playSound(SoundEvents.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 1F, 1F);
+                    player.setInvulnerable(false);
                 } else {
                     seeker_bar.setName(Text.literal(formattedTime(seeker_time_left)));
                     seeker_bar.addPlayer(player);
@@ -116,7 +117,6 @@ public class Hide_n_Seek implements ModInitializer {
                 }
 
                 player.changeGameMode(GameMode.ADVENTURE);
-                player.setInvulnerable(false);
             } else {
                 player.sendMessage(Text.literal(String.valueOf(seconds)), true);
             }
